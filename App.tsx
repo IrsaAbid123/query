@@ -1,118 +1,158 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, { useState } from 'react';
+import { Text, StyleSheet, View, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { useGetDataQuery, useGetDataByIdQuery, useDeleteDataMutation } from './redux/getDataSlice';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+const App = () => {
+  const [getAll, setGetAll] = useState([]);
+  const [getById, setGetById] = useState(null);
+  const [deletedItems, setDeletedItems] = useState([]); // State to hold deleted items
+  const [selectedItemId, setSelectedItemId] = useState(); // State to hold the selected item ID
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+  const { data: allData } = useGetDataQuery();
+  const { data: dataById } = useGetDataByIdQuery(selectedItemId); // Using selectedItemId here
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+  const [deleteById] = useDeleteDataMutation();
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+  const getApi = () => {
+    setGetAll(allData);
+    setGetById(null);
+  };
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  const getApiById = (id) => {
+    setSelectedItemId(id); // Update the selected item ID
+    setGetById(dataById);
+    console.log(id)
+    console.log(dataById)
+    setGetAll([]);
+  };
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  const deleteDataById = async (id) => {
+    try {
+      const res = await deleteById(id); // Delete the item with the provided ID
+      console.warn(res);
+      setDeletedItems(res); // Add deleted item to the list
+      console.warn(res)
+      setGetById(null);
+    } catch (error) {
+      console.error("Error deleting data:", error);
+    }
   };
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
+    <View style={styles.container}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <TouchableOpacity style={styles.btn} onPress={getApi}>
+          <Text style={styles.txt}>Get All Products</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.btn} onPress={getApiById}>
+          <Text style={styles.txt}>Get Product by ID</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.btn} onPress={deleteDataById}>
+          <Text style={styles.txt}>Delete Data by ID</Text>
+        </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
-  );
-}
 
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {getAll.map((item, index) => (
+          <TouchableOpacity onPress={() => getApiById(item.id)} key={index}>
+            <View style={styles.itemContainer}>
+              <Image style={styles.img} source={{ uri: item.image }} />
+              <View style={{ marginLeft: 10 }}>
+                <Text style={styles.itemTitleTxt}>{item.title}</Text>
+                <Text numberOfLines={2}>{item.description}</Text>
+                <View style={styles.priceAndRating}>
+                  <Text style={styles.price}>${item.price}</Text>
+                  <Text style={styles.rating}>{item.rating.rate}</Text>
+                </View>
+                <TouchableOpacity onPress={() => deleteDataById(item.id)}>
+                  <Text style={styles.deleteBtn}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ))}
+        {getById && (
+          <View style={styles.itemContainer}>
+            <Image style={styles.img} source={{ uri: getById.image }} />
+            <View style={{ marginLeft: 10 }}>
+              <Text style={styles.itemTitleTxt}>{getById.title}</Text>
+              <Text numberOfLines={2}>{getById.description}</Text>
+              <View style={styles.priceAndRating}>
+                <Text style={styles.price}>${getById.price}</Text>
+                <Text style={styles.rating}>{getById.rating.rate}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+        {/* Display deleted items
+        {deletedItems && (
+          <View style={styles.itemContainer}>
+            <Text style={styles.deletedItemText}>{deletedItems.title} - Deleted</Text>
+          </View>
+        )} */}
+      </ScrollView>
+    </View>
+  );
+};
 
 export default App;
+
+const styles = StyleSheet.create({
+  container: {
+    margin: 20,
+    backgroundColor: 'white'
+  },
+  btn: {
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 5,
+    margin: 10,
+  },
+  txt: {
+    color: 'black',
+    fontSize: 15,
+  },
+  img: {
+    height: 150,
+    width: 150,
+    marginBottom: 30,
+    resizeMode: 'contain',
+  },
+  itemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    margin: 10
+  },
+  itemTitleTxt: {
+    maxWidth: '50%',
+    fontWeight: '700',
+    color: 'black',
+    fontSize: 17,
+  },
+  priceAndRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 140,
+    marginTop: 10,
+    justifyContent: 'space-between',
+  },
+  price: {
+    color: 'green',
+    fontSize: 15,
+  },
+  rating: {
+    color: 'orange',
+  },
+  deleteBtn: {
+    backgroundColor: 'red',
+    maxWidth: '25%',
+    textAlign: 'center',
+    padding: 8,
+    borderRadius: 10,
+    color: 'white',
+    marginTop: 10,
+  },
+  deletedItemText: {
+    color: 'red',
+  },
+});
